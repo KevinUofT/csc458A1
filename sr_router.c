@@ -80,5 +80,25 @@ void sr_handlepacket(struct sr_instance* sr,
 
   /* fill in code here */
 
+  uint16_t frametype = ethertype(packet);
+  if (frametype == ethertype_arp){
+    sr_handle_arppacket(sr, packet + sizeof(sr_ethernet_hdr_t), len, interface);
+  }
 }/* end sr_ForwardPacket */
 
+void sr_handle_arppacket(struct sr_instance* sr,
+        uint8_t * packet/* lent */,
+        unsigned int len,
+        char* interface/* lent */)
+{
+  sr_arp_hdr_t *arp_hdr = (sr_arp_hdr_t *)(packet);
+
+  //handle reply
+  if (arp_hdr->ar_op == arp_op_reply){
+    sr_arpcache_insert(sr->cache, arp_hdr->ar_sha[ETHER_ADDR_LEN], ar_sip);
+    sr_arpcache_dump(sr->cache);
+  }
+
+
+
+}
