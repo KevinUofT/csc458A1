@@ -91,13 +91,13 @@ void sr_handle_arppacket(struct sr_instance* sr,
         unsigned int len,
         char* interface/* lent */)
 {
-  sr_arp_hdr_t *arp_hdr = (sr_arp_hdr_t *)(packet);
+  // sr_arp_hdr_t *arp_hdr = (sr_arp_hdr_t *)(packet);
 
-  //handle reply
-  if (arp_hdr->ar_op == arp_op_reply){
-    sr_arpcache_insert(sr->cache, arp_hdr->ar_sha[ETHER_ADDR_LEN], ar_sip);
-    sr_arpcache_dump(sr->cache);
-  }
+  // //handle reply
+  // if (arp_hdr->ar_op == arp_op_reply){
+  //   sr_arpcache_insert(sr->cache, arp_hdr->ar_sha[ETHER_ADDR_LEN], ar_sip);
+  //   sr_arpcache_dump(sr->cache);
+  // }
 
 
 
