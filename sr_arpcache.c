@@ -20,6 +20,44 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
     /* Fill this in */
 }
 
+/* create a new ARP packet */
+uint8_t* sr_create_arppacket(uint8_t * ether_shost,
+            uint16_t ether_type,
+            unsigned short  ar_op,          
+            unsigned char   ar_sha[ETHER_ADDR_LEN],
+            uint32_t        ar_sip,
+            uint32_t        ar_tip){
+
+  uint8_t * packet = (uint8_t *)malloc( sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
+  
+  sr_ethernet_hdr_t *e_hdr = (sr_ethernet_hdr_t *)(packet);
+  sr_arp_hdr_t *arp_hdr = (sr_arp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
+
+  arp_hdr->ar_sip = ar_sip;
+  arp_hdr->ar_tip = ar_tip;
+  arp_hdr->ar_op = ar_op;
+  e_hdr->ether_type = ether_type;
+
+  uint8_t Ether_mac[ETHER_ADDR_LEN];
+  unsigned char ARP_mac[ETHER_ADDR_LEN];
+  Ether_mac[0] = 0xff;
+  Ether_mac[1] = 0xff;
+  Ether_mac[2] = 0xff;
+  Ether_mac[3] = 0xff;
+  Ether_mac[4] = 0xff;
+  ARP_mac[0] = 0x00;
+  ARP_mac[1] = 0x00;
+  ARP_mac[2] = 0x00;
+  ARP_mac[3] = 0x00;
+  ARP_mac[4] = 0x00;
+
+  memcpy(arp_hdr->ar_sha, ar_sha, ETHER_ADDR_LEN );
+  memcpy(e_hdr->ether_dhost, Ether_mac, ETHER_ADDR_LEN);
+  memcpy(arp_hdr->ar_tha, ARP_mac, ETHER_ADDR_LEN);
+
+  return packet;
+}
+
 /* You should not need to touch the rest of this code. */
 
 /* Checks if an IP->MAC mapping is in the cache. IP is in network byte order.
