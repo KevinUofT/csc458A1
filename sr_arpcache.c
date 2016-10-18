@@ -20,6 +20,49 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
     /* Fill this in */
 }
 
+
+
+
+
+
+/* The handle_arpreq() function is a function you should write, and it should
+   handle sending ARP requests if necessary */ 
+void sr_handle_arpreq(struct sr_arpreq * req){
+  
+  
+  /*
+  --
+  
+  # When sending packet to next_hop_ip
+  entry = arpcache_lookup(next_hop_ip)
+  
+  if entry:
+      use next_hop_ip->mac mapping in entry to send the packet
+      free entry
+  else:
+      req = arpcache_queuereq(next_hop_ip, packet, len)
+      handle_arpreq(req)
+  
+  --
+  
+  The handle_arpreq() function is a function you should write, and it should
+  handle sending ARP requests if necessary:
+  
+  function handle_arpreq(req):
+      if difftime(now, req->sent) > 1.0
+          if req->times_sent >= 5:
+              send icmp host unreachable to source addr of all pkts waiting
+              on this request
+              arpreq_destroy(req)
+          else:
+              send arp request
+              req->sent = now
+              req->times_sent++
+
+  --
+  */
+}
+
 /* create a new ARP packet */
 uint8_t* sr_create_arppacket(uint8_t * ether_shost,
             uint16_t ether_type,
@@ -54,9 +97,12 @@ uint8_t* sr_create_arppacket(uint8_t * ether_shost,
   memcpy(arp_hdr->ar_sha, ar_sha, ETHER_ADDR_LEN );
   memcpy(e_hdr->ether_dhost, Ether_mac, ETHER_ADDR_LEN);
   memcpy(arp_hdr->ar_tha, ARP_mac, ETHER_ADDR_LEN);
+  memcpy(e_hdr->ether_shost, ether_shost, ETHER_ADDR_LEN);
 
   return packet;
 }
+
+
 
 /* You should not need to touch the rest of this code. */
 
