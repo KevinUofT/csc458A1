@@ -69,7 +69,7 @@ void sr_init(struct sr_instance* );
 void sr_handlepacket(struct sr_instance* , uint8_t * , unsigned int , char* );
 void sr_handle_arppacket(struct sr_instance* ,uint8_t *, unsigned int , char* );
 void sr_handle_ippacket(struct sr_instance* ,uint8_t *, unsigned int , char* );
-uint8_t* sr_create_icmpt3packet(uint8_t *, uint8_t *, uint16_t, uint8_t, uint32_t, uint32_t , uint8_t, uint8_t);
+uint8_t* sr_create_icmpt3packet(uint8_t *, uint8_t *, uint32_t, uint32_t, uint8_t, uint8_t);
 struct sr_rt* sr_helper_rtable(struct sr_rt*, uint32_t);
 
 /* -- sr_if.c -- */

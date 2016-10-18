@@ -64,9 +64,7 @@ void sr_handle_arpreq(struct sr_arpreq * req){
 }
 
 /* create a new ARP packet */
-uint8_t* sr_create_arppacket(uint8_t * ether_shost,
-            uint16_t ether_type,
-            unsigned short  ar_op,          
+uint8_t* sr_create_arppacket(uint8_t * ether_shost,         
             unsigned char   ar_sha[ETHER_ADDR_LEN],
             uint32_t        ar_sip,
             uint32_t        ar_tip){
@@ -78,8 +76,8 @@ uint8_t* sr_create_arppacket(uint8_t * ether_shost,
 
   arp_hdr->ar_sip = ar_sip;
   arp_hdr->ar_tip = ar_tip;
-  arp_hdr->ar_op = ar_op;
-  e_hdr->ether_type = ether_type;
+  arp_hdr->ar_op = arp_op_request;
+  e_hdr->ether_type = ethertype_arp;
 
   uint8_t Ether_mac[ETHER_ADDR_LEN];
   unsigned char ARP_mac[ETHER_ADDR_LEN];

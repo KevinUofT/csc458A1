@@ -149,7 +149,7 @@ void sr_handle_arppacket(struct sr_instance* sr,
           /* substitute ether_dhost with MAC address from ARP Reply */
           sr_ethernet_hdr_t *buf_hdr = (sr_ethernet_hdr_t *)(arpreq_temp->packets->buf);
           memcpy(buf_hdr->ether_dhost, arp_hdr->ar_sha, ETHER_ADDR_LEN);
-          sr_send_packet(sr, arpreq_temp->packets->buf, len, interface);
+          sr_send_packet(sr, arpreq_temp->packets->buf, arpreq_temp->packets->len, interface);
 
           if (arpreq_temp->next == NULL){
             break;
@@ -235,7 +235,7 @@ void sr_handle_ippacket(struct sr_instance* sr,
         if (icmp_hdr->icmp_type == 8){
           icmp_hdr->icmp_type = 0;
           temp_ip_store = ip_hdr->ip_dst;
-          icmp_type->icmp_sum = icmp_type->icmp_sum >> 16;
+          icmp_hdr->icmp_sum = icmp_hdr->icmp_sum >> 16;
           ip_hdr->ip_dst = ip_hdr->ip_src;
           ip_hdr->ip_src = temp_ip_store;
           ip_hdr->ip_ttl = 64;
@@ -251,8 +251,7 @@ void sr_handle_ippacket(struct sr_instance* sr,
       else if (ip_proto == 6 || ip_proto == 17){
         
         uint8_t* new_packet = sr_create_icmpt3packet(e_hdr->ether_shost,
-        if_list_temp->addr, ethertype_ip, ip_protocol_icmp,ip_hdr->ip_src,
-        ip_hdr->ip_dst, 3, 3);
+        if_list_temp->addr, ip_hdr->ip_src, ip_hdr->ip_dst, 3, 3);
 
         sr_send_packet(sr, new_packet, sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t), interface); 
         free(new_packet);
@@ -273,8 +272,7 @@ void sr_handle_ippacket(struct sr_instance* sr,
           /* if not match, provide ICMP net unreachable */
           if (rtable == NULL){
             uint8_t* new_packet = sr_create_icmpt3packet(e_hdr->ether_shost,
-            if_list_temp->addr, ethertype_ip, ip_protocol_icmp,ip_hdr->ip_src,
-            ip_hdr->ip_dst, 3, 0);
+            if_list_temp->addr, ip_hdr->ip_src, ip_hdr->ip_dst, 3, 0);
 
             sr_send_packet(sr, new_packet, sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t), interface); 
             free(new_packet);
@@ -300,8 +298,8 @@ void sr_handle_ippacket(struct sr_instance* sr,
             /*if Miss, send ARP request,  Resent > 5, ICMP host unreachable */
             else{
 
-              uint8_t* new_packet = sr_create_arppacket(if_list_temp->addr, ethertype_arp, 
-              arp_op_request, if_list_temp->addr, if_list_temp->ip, sr_cache_entry->ip);
+              uint8_t* new_packet = sr_create_arppacket(if_list_temp->addr, 
+              if_list_temp->addr, if_list_temp->ip, sr_cache_entry->ip);
               sr_send_packet(sr, new_packet, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t), interface);
               
               sr_arpcache_queuereq(&(sr->cache), rtable->gw.s_addr, new_packet, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t), rtable->interface); 
@@ -325,8 +323,6 @@ void sr_handle_ippacket(struct sr_instance* sr,
 /* create a new Type 3 icmp packet */
 uint8_t* sr_create_icmpt3packet(uint8_t * ether_dhost,
             uint8_t * ether_shost,
-            uint16_t ether_type,
-            uint8_t ip_p,
             uint32_t ip_dst,
             uint32_t ip_src,
             uint8_t icmp_type,
@@ -340,17 +336,20 @@ uint8_t* sr_create_icmpt3packet(uint8_t * ether_dhost,
   sr_ip_hdr_t *ip_hdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
   sr_icmp_t3_hdr_t* icmp_hrd_t3 = (sr_icmp_t3_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
 
-  /* reminder: checksum */
+  /* set up all the necessary information */
 
   icmp_hrd_t3->icmp_type = icmp_type;
   icmp_hrd_t3->icmp_code = icmp_code;
   ip_hdr->ip_dst = ip_dst;
   ip_hdr->ip_src = ip_src;
-  ip_hdr->ip_p = ip_p;
+  ip_hdr->ip_p = ip_protocol_icmp;
   ip_hdr->ip_ttl = 64;  
-  e_hdr->ether_type = ether_type;
+  e_hdr->ether_type = ethertype_ip;
   memcpy(e_hdr->ether_dhost, ether_dhost, ETHER_ADDR_LEN);
   memcpy(e_hdr->ether_shost, ether_shost, ETHER_ADDR_LEN);
+
+  /* make a checksum */
+  ip_hdr->ip_sum = cksum(packet, sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t)); 
 
   return packet;
 }

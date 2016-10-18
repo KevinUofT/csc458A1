@@ -147,9 +147,7 @@ int   sr_arpcache_init(struct sr_arpcache *cache);
 int   sr_arpcache_destroy(struct sr_arpcache *cache);
 void *sr_arpcache_timeout(void *cache_ptr);
 
-uint8_t* sr_create_arppacket(uint8_t * ether_shost,
-            uint16_t ether_type,
-            unsigned short  ar_op,          
+uint8_t* sr_create_arppacket(uint8_t * ether_shost,         
             unsigned char   ar_sha[ETHER_ADDR_LEN],
             uint32_t        ar_sip,
             uint32_t        ar_tip);
