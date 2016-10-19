@@ -17,9 +17,23 @@
   See the comments in the header file for an idea of what it should look like.
 */
 void sr_arpcache_sweepreqs(struct sr_instance *sr) { 
-    /* Fill this in */
-}
+     struct sr_arpcache *cache = sr->cache;
+     cache = &(sr->cache);
+     struct sr_arpreq *current_request = cache.requests;
+     struct sr_arpreq *next_request;
+     
+     if (current_request != NULL){
+        next_request = current_request->next;
+     }
 
+     while(current_request != NULL){
+        sr_handle_arpreq(current_request, sr);
+        current_request = next_request;
+        if(current_request != NULL){
+            next_request = current_request->next;
+        }
+     }
+ }
 
 
 
@@ -27,7 +41,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
 
 /* The handle_arpreq() function is a function you should write, and it should
    handle sending ARP requests if necessary */ 
-void sr_handle_arpreq(struct sr_arpreq * req){
+void sr_handle_arpreq(struct sr_arpreq* req, struct sr_instance* sr){
   
   
   /*
