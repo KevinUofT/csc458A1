@@ -17,22 +17,30 @@
   See the comments in the header file for an idea of what it should look like.
 */
 void sr_arpcache_sweepreqs(struct sr_instance *sr) { 
-     struct sr_arpcache *cache = sr->cache;
-     cache = &(sr->cache);
-     struct sr_arpreq *current_request = cache.requests;
-     struct sr_arpreq *next_request;
+     // struct sr_arpcache *cache = sr->cache;
+     // cache = &(sr->cache);
+     // struct sr_arpreq *current_request = cache.requests;
+     // struct sr_arpreq *next_request;
      
-     if (current_request != NULL){
-        next_request = current_request->next;
-     }
+     // if (current_request != NULL){
+     //    next_request = current_request->next;
+     // }
 
-     while(current_request != NULL){
-        sr_handle_arpreq(current_request, sr);
-        current_request = next_request;
-        if(current_request != NULL){
-            next_request = current_request->next;
-        }
-     }
+     // while(current_request != NULL){
+     //    sr_handle_arpreq(current_request, sr);
+     //    current_request = next_request;
+     //    if(current_request != NULL){
+     //        next_request = current_request->next;
+     //    }
+     // }
+
+    struct sr_arpcache *cache = &(sr->cache);
+    struct sr_arpreq *current = cache->requests;
+
+    for (current; current->next != NULL; current=current->next){
+      sr_handle_arpreq(current, sr);
+    }
+
  }
 
 
@@ -43,38 +51,43 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
    handle sending ARP requests if necessary */ 
 void sr_handle_arpreq(struct sr_arpreq* req, struct sr_instance* sr){
   
-  
-  /*
-  --
-  
-  # When sending packet to next_hop_ip
-  entry = arpcache_lookup(next_hop_ip)
-  
-  if entry:
-      use next_hop_ip->mac mapping in entry to send the packet
-      free entry
-  else:
-      req = arpcache_queuereq(next_hop_ip, packet, len)
-      handle_arpreq(req)
-  
-  --
-  
-  The handle_arpreq() function is a function you should write, and it should
-  handle sending ARP requests if necessary:
-  
-  function handle_arpreq(req):
-      if difftime(now, req->sent) > 1.0
-          if req->times_sent >= 5:
-              send icmp host unreachable to source addr of all pkts waiting
-              on this request
-              arpreq_destroy(req)
-          else:
-              send arp request
-              req->sent = now
-              req->times_sent++
+  time_t now = time(0);
 
-  --
-  */
+
+  if (difftime(now, req->sent) > 0){
+
+
+    /* if the number of time sent is bigger than 5 */
+    if (req->times_sent >= 5){
+      /*send icmp host unreachable to source addr 
+      of all pkts waiting on this request */
+
+      for (req->packets; req->packets->next != NULL; req->packets = req->packets->next){
+        struct sr_if* if_list = sr_get_interface(sr, req->packets->iface);
+
+        /* Type 3, Code 1, Destination host unreachable */
+        uint8_t * new_packet =  sr_create_icmpt3packet(if_list->addr, req->packets->buf, 3, 1);
+
+        unsigned int total_len = sizeof(sr_ethernet_hdr_t)
+        + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t);   
+        sr_send_packet(sr, new_packet, total_len, if_list->name);
+        free(new_packet);
+      }
+      sr_arpreq_destroy(&(sr->cache), req);
+
+    }
+
+    else{
+      req->sent = now;
+      req->times_sent++;
+
+      struct sr_if* if_list = sr_get_interface(sr, req->packets->iface);
+
+      uint8_t * new_packet = sr_create_arppacket(if_list->addr, if_list->addr, if_list->ip, req->ip); 
+      sr_send_packet(sr, new_packet, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t), req->packets->iface);
+    }
+  }
+  
 }
 
 /* create a new ARP packet */
@@ -83,10 +96,12 @@ uint8_t* sr_create_arppacket(uint8_t * ether_shost,
             uint32_t        ar_sip,
             uint32_t        ar_tip){
 
-  uint8_t * packet = (uint8_t *)malloc( sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
+  /* malloc space for new packet */
+  uint8_t * new_packet = (uint8_t *)malloc( sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
   
-  sr_ethernet_hdr_t *e_hdr = (sr_ethernet_hdr_t *)(packet);
-  sr_arp_hdr_t *arp_hdr = (sr_arp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
+  /* set up all the header */
+  sr_ethernet_hdr_t *e_hdr = (sr_ethernet_hdr_t *)(new_packet);
+  sr_arp_hdr_t *arp_hdr = (sr_arp_hdr_t *)(new_packet + sizeof(sr_ethernet_hdr_t));
 
   arp_hdr->ar_sip = ar_sip;
   arp_hdr->ar_tip = ar_tip;
@@ -111,7 +126,7 @@ uint8_t* sr_create_arppacket(uint8_t * ether_shost,
   memcpy(arp_hdr->ar_tha, ARP_mac, ETHER_ADDR_LEN);
   memcpy(e_hdr->ether_shost, ether_shost, ETHER_ADDR_LEN);
 
-  return packet;
+  return new_packet;
 }
 
 
