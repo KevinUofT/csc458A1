@@ -17,27 +17,11 @@
   See the comments in the header file for an idea of what it should look like.
 */
 void sr_arpcache_sweepreqs(struct sr_instance *sr) { 
-     // struct sr_arpcache *cache = sr->cache;
-     // cache = &(sr->cache);
-     // struct sr_arpreq *current_request = cache.requests;
-     // struct sr_arpreq *next_request;
      
-     // if (current_request != NULL){
-     //    next_request = current_request->next;
-     // }
-
-     // while(current_request != NULL){
-     //    sr_handle_arpreq(current_request, sr);
-     //    current_request = next_request;
-     //    if(current_request != NULL){
-     //        next_request = current_request->next;
-     //    }
-     // }
-
     struct sr_arpcache *cache = &(sr->cache);
-    struct sr_arpreq *current = cache->requests;
+    struct sr_arpreq *current = NULL;
 
-    for (current; current->next != NULL; current=current->next){
+    for (current = cache->requests; current->next != NULL; current=current->next){
       sr_handle_arpreq(current, sr);
     }
 
@@ -61,12 +45,12 @@ void sr_handle_arpreq(struct sr_arpreq* req, struct sr_instance* sr){
     if (req->times_sent >= 5){
       /*send icmp host unreachable to source addr 
       of all pkts waiting on this request */
-
-      for (req->packets; req->packets->next != NULL; req->packets = req->packets->next){
-        struct sr_if* if_list = sr_get_interface(sr, req->packets->iface);
+      struct sr_packet* req_temp=NULL;
+      for (req_temp = req->packets; req_temp->next != NULL; req_temp = req_temp->next){
+        struct sr_if* if_list = sr_get_interface(sr, req_temp->iface);
 
         /* Type 3, Code 1, Destination host unreachable */
-        uint8_t * new_packet =  sr_create_icmpt3packet(if_list->addr, req->packets->buf, 3, 1);
+        uint8_t * new_packet =  sr_create_icmpt3packet(if_list->addr, req_temp->buf, 3, 1);
 
         unsigned int total_len = sizeof(sr_ethernet_hdr_t)
         + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t);   

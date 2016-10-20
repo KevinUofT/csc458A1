@@ -151,5 +151,7 @@ uint8_t* sr_create_arppacket(uint8_t * ether_shost,
             unsigned char   ar_sha[ETHER_ADDR_LEN],
             uint32_t        ar_sip,
             uint32_t        ar_tip);
+void sr_handle_arpreq(struct sr_arpreq* , struct sr_instance* );
+void sr_arpcache_sweepreqs(struct sr_instance *);
 
 #endif
