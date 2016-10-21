@@ -19,11 +19,13 @@
 void sr_arpcache_sweepreqs(struct sr_instance *sr) { 
      
     struct sr_arpcache *cache = &(sr->cache);
+    
     struct sr_arpreq *current = NULL;
 
-    for (current = cache->requests; current->next != NULL; current=current->next){
+    for (current = cache->requests; current != NULL; current=current->next){
       sr_handle_arpreq(current, sr);
     }
+    
 
  }
 
@@ -35,7 +37,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
    handle sending ARP requests if necessary */ 
 void sr_handle_arpreq(struct sr_arpreq* req, struct sr_instance* sr){
   
-  time_t now = time(0);
+  time_t now = time(NULL);
 
 
   if (difftime(now, req->sent) > 0){
@@ -110,6 +112,7 @@ uint8_t* sr_create_arppacket(uint8_t * ether_shost,
   memcpy(arp_hdr->ar_tha, ARP_mac, ETHER_ADDR_LEN);
   memcpy(e_hdr->ether_shost, ether_shost, ETHER_ADDR_LEN);
 
+  printf("successful create arp packet\n");
   return new_packet;
 }
 

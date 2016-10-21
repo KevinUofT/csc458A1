@@ -149,7 +149,7 @@ void sr_handle_arppacket(struct sr_instance* sr,
           /* substitute ether_dhost with MAC address from ARP Reply */
           sr_ethernet_hdr_t *buf_hdr = (sr_ethernet_hdr_t *)(arpreq_temp->packets->buf);
           memcpy(buf_hdr->ether_dhost, arp_hdr->ar_sha, ETHER_ADDR_LEN);
-          sr_send_packet(sr, arpreq_temp->packets->buf, arpreq_temp->packets->len, interface);
+          sr_send_packet(sr, arpreq_temp->packets->buf, arpreq_temp->packets->len, arpreq_temp->packets->iface);
 
           if (arpreq_temp->next == NULL){
             break;
@@ -233,16 +233,22 @@ void sr_handle_ippacket(struct sr_instance* sr,
 
         /* if it is ICMP echo req, send echo reply */
         if (icmp_hdr->icmp_type == 8){
+
+          /*Type 0, Echo Reply*/
           icmp_hdr->icmp_type = 0;
+
+
           temp_ip_store = ip_hdr->ip_dst;
-          icmp_hdr->icmp_sum = icmp_hdr->icmp_sum >> 16;
           ip_hdr->ip_dst = ip_hdr->ip_src;
           ip_hdr->ip_src = temp_ip_store;
           ip_hdr->ip_ttl = 64;
           memcpy(e_hdr->ether_dhost, e_hdr->ether_shost, ETHER_ADDR_LEN);
           memcpy(e_hdr->ether_shost, if_list_temp->addr, ETHER_ADDR_LEN);
+          icmp_hdr->icmp_sum = icmp_hdr->icmp_sum >> 16;
 
-          sr_send_packet(sr, packet, len, interface); 
+          icmp_hdr->icmp_sum = cksum(icmp_hdr, sizeof(sr_icmp_hdr_t));
+
+          sr_send_packet(sr, packet, len, if_list_temp->name); 
 
         }
       }
@@ -304,6 +310,7 @@ void sr_handle_ippacket(struct sr_instance* sr,
 
               uint8_t* new_packet = sr_create_arppacket(if_list_temp->addr, 
               if_list_temp->addr, if_list_temp->ip, sr_cache_entry->ip);
+
               sr_send_packet(sr, new_packet, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t), interface);
               
               sr_arpcache_queuereq(&(sr->cache), rtable->gw.s_addr, new_packet, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t), rtable->interface); 
@@ -322,7 +329,7 @@ void sr_handle_ippacket(struct sr_instance* sr,
 
 
 /* create a new Type 3 icmp packet */
-uint8_t* sr_create_icmpt3packet(uint8_t * ether_shost,
+uint8_t* sr_create_icmpt3packet(uint8_t * MAC_src,
             uint8_t * packet,
             uint8_t icmp_type,
             uint8_t icmp_code){
@@ -349,24 +356,27 @@ uint8_t* sr_create_icmpt3packet(uint8_t * ether_shost,
   /* set up ethernet necessary information */
   new_e_hdr->ether_type = ethertype_ip;
   memcpy(new_e_hdr->ether_dhost, p_e_hdr->ether_shost, ETHER_ADDR_LEN);
-  memcpy(new_e_hdr->ether_shost, ether_shost, ETHER_ADDR_LEN);
+  memcpy(new_e_hdr->ether_shost, MAC_src, ETHER_ADDR_LEN);
 
   /* set up ip necessary information */
 
   new_ip_hdr->ip_dst = p_ip_hdr->ip_src;
   new_ip_hdr->ip_src = p_ip_hdr->ip_dst;
   new_ip_hdr->ip_p = ip_protocol_icmp;
-  new_ip_hdr->ip_ttl = 0xff;  
+  new_ip_hdr->ip_ttl = 64;  
+  new_ip_hdr->ip_sum = new_ip_hdr->ip_sum >> 16;
 
   /* make a ip checksum */
-  new_ip_hdr->ip_sum = cksum(new_ip_hdr, new_ip_hdr->ip_len); 
+  new_ip_hdr->ip_sum = cksum(new_ip_hdr, sizeof(sr_ip_hdr_t)); 
 
   /* set up icmp necessary information */
   new_icmp_hrd_t3->icmp_type = icmp_type;
   new_icmp_hrd_t3->icmp_code = icmp_code;
+  new_icmp_hrd_t3->icmp_sum = new_icmp_hrd_t3->icmp_sum >> 16;
   
-  new_ip_hdr->ip_sum = cksum(new_ip_hdr, sizeof(sr_icmp_t3_hdr_t)); 
+  new_icmp_hrd_t3->icmp_sum = cksum(new_icmp_hrd_t3, sizeof(sr_icmp_t3_hdr_t)); 
 
+  printf("successful create icmpt3 packet\n");
   return new_packet;
 }
 
